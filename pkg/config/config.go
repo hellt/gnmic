@@ -18,6 +18,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"text/template"
 	"time"
@@ -438,12 +439,29 @@ func (c *Config) CreateGetRequest(tc *types.TargetConfig) (*gnmi.GetRequest, err
 	if tc.Encoding != nil {
 		enc = *tc.Encoding
 	}
+
+	var depth *uint32
+	if c.LocalFlags.GetDepth != "" {
+		_depth, err := strconv.ParseUint(c.LocalFlags.GetDepth, 10, 32)
+		if err != nil {
+			return nil, fmt.Errorf("depth: %v", err)
+		}
+		temp := uint32(_depth)
+		depth = &temp
+	}
+
 	gnmiOpts = append(gnmiOpts,
 		api.Encoding(enc),
 		api.DataType(c.LocalFlags.GetType),
 		api.Prefix(c.LocalFlags.GetPrefix),
 		api.Target(c.LocalFlags.GetTarget),
 	)
+
+	// depth extension
+	if depth != nil {
+		gnmiOpts = append(gnmiOpts, api.Extension_DepthLevel(*depth))
+	}
+
 	for _, p := range c.LocalFlags.GetPath {
 		gnmiOpts = append(gnmiOpts, api.Path(strings.TrimSpace(p)))
 	}
